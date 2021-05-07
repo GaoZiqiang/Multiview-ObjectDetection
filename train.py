@@ -1,9 +1,8 @@
 from __future__ import absolute_import
-import sys
 import time
 import datetime
+import argparse
 import os.path as osp
-import numpy as np
 
 import torch
 import torch.nn as nn
@@ -16,17 +15,12 @@ from util.losses import CrossEntropyLoss, DeepSupervision, CrossEntropyLabelSmoo
 from util import data_manager
 from util import transforms as T
 from util.dataset_loader import ImageDataset
-from util.utils import Logger
 from util.utils import AverageMeter, Logger, save_checkpoint
 from util.eval_metrics import evaluate
 from util.optimizers import init_optim
 from util.samplers import RandomIdentitySampler
-from IPython import embed
 
-# matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
-from IPython import embed
 
 parser = argparse.ArgumentParser(description='Train AlignedReID with cross entropy loss and triplet hard loss')
 # Datasets
@@ -91,19 +85,12 @@ parser.add_argument('--unaligned',action= 'store_true', help= 'test local featur
 
 args = parser.parse_args()
 
-# 作为C++调用Python的测试
-def printHello():
-    print('Hello World!')
 
 def main():
     use_gpu = torch.cuda.is_available()
     if args.use_cpu: use_gpu = False
     pin_memory = True if use_gpu else False
 
-    # if not args.evaluate:
-    #     sys.stdout = Logger(osp.join(args.save_dir, 'log_train.txt'))
-    # else:
-    #     sys.stdout = Logger(osp.join(args.save_dir, 'log_test.txt'))
     print("==========\nArgs:{}\n==========".format(args))
 
     if use_gpu:
@@ -117,7 +104,6 @@ def main():
     print("Initializing dataset {}".format(args.dataset))
     dataset = data_manager.init_img_dataset(
         root=args.root, name=args.dataset, split_id=args.split_id,
-        #cuhk03_labeled=args.cuhk03_labeled, cuhk03_classic_split=args.cuhk03_classic_split,
     )
 
     # data augmentation
@@ -365,10 +351,6 @@ def test(model, queryloader, galleryloader, use_gpu, ranks=[1, 5, 8]):
             num += 1
     print('经多视角识别后的person_num为:', num)
 
-    # embed()
-    # 下面对distmat进行处理，若distmat<xx则做某操作，否则，做某操作
-    # embed()
-
     if not args.test_distance== 'global':
         print("Only using global branch")
         from util.distance import low_memory_local_dist
@@ -389,12 +371,8 @@ def test(model, queryloader, galleryloader, use_gpu, ranks=[1, 5, 8]):
     cmc, mAP = evaluate(distmat, q_pids, g_pids, q_camids, g_camids, use_metric_cuhk03=args.use_metric_cuhk03)
     print("cms's shape: ",cmc.shape)
     print("cms's type: ",cmc.dtype)
-    # embed()
-
-    # embed()
 
     #cmc1 = []
-    #print("cmc2's shape: ",cmc2.shape)
     print("------Results ----------")
     print("mAP: {:.1%}".format(mAP))
     print("CMC curve")
@@ -402,62 +380,6 @@ def test(model, queryloader, galleryloader, use_gpu, ranks=[1, 5, 8]):
         print("Rank-{:<3}: {:.1%}".format(r, cmc[r - 1]))
         cmc1.append(cmc[r-1])
     print("------------------")
-
-    # embed()
-
-    # plt.plot(ranks,cmc1,label='ranking',color='red',marker='o',markersize=5)
-    # plt.ylabel('Accuracy')
-    # plt.xlabel('Rank_num')
-    # plt.title('Result of Ranking and Re-ranking(query_tank_cam=5)')
-    # plt.legend()
-    # plt.show()
-    #
-    # 进行reranking
-    # if args.reranking:
-    #     from util.re_ranking import re_ranking
-    #     if args.test_distance == 'global':
-    #         print("Only using global branch for reranking")
-    #         distmat = re_ranking(qf,gf,k1=20, k2=6, lambda_value=0.3)
-    #     else:
-    #         local_qq_distmat = low_memory_local_dist(lqf.numpy(), lqf.numpy(),aligned= not args.unaligned)
-    #         local_gg_distmat = low_memory_local_dist(lgf.numpy(), lgf.numpy(),aligned= not args.unaligned)
-    #         local_dist = np.concatenate(
-    #             [np.concatenate([local_qq_distmat, local_distmat], axis=1),
-    #              np.concatenate([local_distmat.T, local_gg_distmat], axis=1)],
-    #             axis=0)
-    #         if args.test_distance == 'local':
-    #             print("Only using local branch for reranking")
-    #             distmat = re_ranking(qf,gf,k1=20,k2=6,lambda_value=0.3,local_distmat=local_dist,only_local=True)
-    #         elif args.test_distance == 'global_local':
-    #             print("Using global and local branches for reranking")
-    #             distmat = re_ranking(qf,gf,k1=20,k2=6,lambda_value=0.3,local_distmat=local_dist,only_local=False)
-    #     print("Computing CMC and mAP for re_ranking")
-    #     cmc, mAP = evaluate(distmat, q_pids, g_pids, q_camids, g_camids, use_metric_cuhk03=args.use_metric_cuhk03)
-    #
-    #     # cmc2 = []
-    #     print("Results ----------")
-    #     print("mAP(RK): {:.1%}".format(mAP))
-    #     print("CMC curve(RK)")
-    #     for r in ranks:
-    #         print("Rank-{:<3}: {:.1%}".format(r, cmc[r - 1]))
-    #         cmc2.append(cmc[r - 1])
-    #     print("------------------")
-    #
-    #
-    #
-    # # matlpot
-    # # print("----cmc2----",cmc2)
-    # # print("cmc1's value------")
-    # # print(cmc1)
-    # plt.plot(ranks,cmc1,label='ranking',color='red',marker='o',markersize=5)
-    # plt.plot(ranks,cmc2,label='re-ranking',color='blue',marker='o',markersize=5)
-    # plt.ylabel('Accuracy')
-    # plt.xlabel('Rank_num')
-    # plt.title('Result of Ranking and Re-ranking(query_tank_cam=5)')
-    # plt.legend()
-    # plt.savefig('/home/gaoziqiang/tempt/tank_cam5.png')
-    # plt.show()
-    
 
     return cmc[0]
 
