@@ -1,6 +1,10 @@
 from __future__ import absolute_import
 
 import time
+import glob
+import os.path as osp
+import numpy as np
+import matplotlib.pyplot as plt
 
 import torch
 import torch.nn as nn
@@ -13,10 +17,13 @@ from util import data_manager# 此为我们的data_manager工具类
 from util import transforms as T
 from util.dataset_loader import ImageDataset
 from util.utils import AverageMeter, Logger, save_checkpoint
+from util.eval_metrics import evaluate
 from util.optimizers import init_optim
-
+from IPython import embed
 
 def main():
+    batch_time_total = AverageMeter()
+    start = time.time()
     # 第四个参数：use_gpu，不需要显示的指定
     use_gpu = torch.cuda.is_available()
     # if args.use_cpu: use_gpu = False
@@ -34,7 +41,8 @@ def main():
 
     # 第二个参数：queryloader
     queryloader = DataLoader(
-        # 问题：dataset.query哪里来的？
+        # 问题：dataset.query哪里来的？ 答：来自data_manager中self.query = query
+        # dataset.query本质为路径集
         ImageDataset(dataset.query, transform=transform_test),
         batch_size=32, shuffle=False, num_workers=4,
         pin_memory=pin_memory, drop_last=False,
@@ -65,11 +73,18 @@ def main():
     # embed()
     test(model, queryloader, galleryloader, use_gpu)
 
-    print('------测试结束------')
+
+    end = time.time()
+    # print("==>测试用时: {:.3f} s".format(end - start))
+
+    print("  test time(s)    | {:.3f}".format(end - start))
+    print("  ------------------------------")
+    print("")
+    # print('------测试结束------')
 
     return 0
 
-def train(epoch, model, criterion_class, criterion_metric, optimizer, trainloader, use_gpu):
+def train(epoch, model  , criterion_class, criterion_metric, optimizer, trainloader, use_gpu):
     model.train()
     losses = AverageMeter()
     batch_time = AverageMeter()
@@ -138,6 +153,7 @@ def test(model, queryloader, galleryloader, use_gpu, ranks=[1, 5, 8]):
         # 计算query集的features
         qf,lqf = [], []#qf:query feature lqf:local query feature
         i = 0
+        # embed()
         for batch_idx, imgs in enumerate(queryloader):
             i += 1
             if use_gpu: imgs = imgs.cuda()
@@ -149,9 +165,11 @@ def test(model, queryloader, galleryloader, use_gpu, ranks=[1, 5, 8]):
 
             features = features.data.cpu()
             local_features = local_features.data.cpu()
+            ### 将query feature入list
             qf.append(features)
             lqf.append(local_features)
 
+        # print("BarchSize:",i)
         # 对tensor进行拼接,axis=0表示进行竖向拼接
         qf = torch.cat(qf, 0)
         lqf = torch.cat(lqf, 0)
@@ -181,7 +199,8 @@ def test(model, queryloader, galleryloader, use_gpu, ranks=[1, 5, 8]):
 
         print("Extracted features for gallery set, obtained {}-by-{} matrix".format(gf.size(0), gf.size(1)))
 
-    print("==> BatchTime(s)/BatchSize(img): {:.3f}/{}".format(batch_time.avg, 32))
+    # embed()
+    # print("==> BatchTime(s) {:.3f}".format(batch_time.sum))
 
     # 下面这些是处理要点
     # feature normlization　特征标准化
@@ -201,7 +220,7 @@ def test(model, queryloader, galleryloader, use_gpu, ranks=[1, 5, 8]):
 
     # 用于测试
     mm, nn = distmat.shape[0], distmat.shape[1]
-    min = [1, 1, 1, 1, 1, 1, 1, 1]  # min数组的大小应该等于mm
+    min = [1] * mm  # min数组的大小应该等于mm
     num = 0
     for i in range(mm):
         for j in range(nn):
@@ -210,8 +229,52 @@ def test(model, queryloader, galleryloader, use_gpu, ranks=[1, 5, 8]):
         # 这里的判定两object是否为同一object的distance阈值还需要进一步优化
         if min[i] < 0.7:
             num += 1
-    print('各图像之间的相似度为：\n',distmat)
-    print('经多视角识别后的person_num为:', num)
+    # print('各图像之间的相似度为：\n',distmat)
+    # print('经多视角识别后的person_num为:', num)
+
+    ### 下面计算cmc和mAp
+    q_pids = process_dir("./data/market1501/view1")
+    g_pids = process_dir("./data/market1501/view2")
+
+    q_camids = [1] * mm
+    g_camids = [1] * nn
+    cmc, mAP = evaluate(distmat, q_pids, g_pids, q_camids, g_camids, use_metric_cuhk03=False)
+    len = max(mm,nn)
+    x = np.linspace(1,len,len)
+    # embed()
+    plt.title("CMC curve of test")
+    plt.xlabel("test times")
+    plt.ylabel("cmc")
+    plt.plot(x,cmc)
+    # plt.show()
+
+    ### 集中展示测试结果
+    print("")
+    print("  本次测试 结果如下")
+    print("  ------------------------------")
+    print("  person num   | {}".format(num))
+    print("  ------------------------------")
+    print("  CMC    | {}".format(cmc))
+    print("  mAP    | {:.3f}".format(mAP))
+    print("  ------------------------------")
+
+    # print("all_cmc:", cmc)
+    # print("mAP{:.3f}:".format(mAP))
+
+def process_dir(dir_path):
+    img_paths = glob.glob(osp.join(dir_path, '*.jpg'))
+    img_names = []
+    for img_path in img_paths:
+        img_name = img_path.split(".jpg",1)[0]
+        img_name = osp.basename(osp.normpath(img_name))
+        img_names.append(img_name)
+
+    return img_names
+
+
 
 if __name__ == '__main__':
+    # dir_path = "./data/market1501/view2"
+    # process_dir(dir_path)
+    # print(process_dir(dir_path))
     main()
