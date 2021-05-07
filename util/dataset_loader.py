@@ -5,8 +5,13 @@ import numpy as np
 import os.path as osp
 
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset# 此Dataset为pytorch的工具类
 
+# from util import data_manager
+
+from IPython import embed
+
+# 实现从img_path中读取image
 def read_image(img_path):
     """Keep reading image until succeed.
     This can avoid IOError incurred by heavy IO process."""
@@ -15,15 +20,22 @@ def read_image(img_path):
         raise IOError("{} does not exist".format(img_path))
     while not got_img:
         try:
+            # embed()
+            img = Image.open(img_path)
+
             img = Image.open(img_path).convert('RGB')
+            # embed()
             got_img = True
         except IOError:
             print("IOError incurred when reading '{}'. Will redo. Don't worry. Just chill.".format(img_path))
             pass
     return img
 
+# 对读取出的image进行相关处理
 class ImageDataset(Dataset):
     """Image Person ReID Dataset"""
+
+    # 这里的dataset本质上是data_manager得到的dataset.query和dataset.gallery
     def __init__(self, dataset, transform=None):
         self.dataset = dataset
         self.transform = transform
@@ -32,11 +44,16 @@ class ImageDataset(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, index):
-        img_path, pid, camid = self.dataset[index]
+        # img_path, pid, camid = self.dataset[index]# 这一行看不懂，index哪里来？
+        img_path= self.dataset[index]
+        # embed()
+        # 从本地读取images
         img = read_image(img_path)
         if self.transform is not None:
             img = self.transform(img)
-        return img, pid, camid
+        # return img, pid, camid
+        # embed()
+        return img# 是个ImageDataset封装好的对象
 
 class VideoDataset(Dataset):
     """Video Person ReID Dataset.
@@ -100,3 +117,10 @@ class VideoDataset(Dataset):
         imgs = torch.cat(imgs, dim=0)
 
         return imgs, pid, camid
+
+# 测试一下data_loader()
+if __name__ == "__main__":
+    img = Image.open('../data/market1501/bounding_box_train/0002_c2s1_068521_00.jpg')
+    embed()
+
+
