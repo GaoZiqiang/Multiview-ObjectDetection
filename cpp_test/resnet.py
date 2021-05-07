@@ -58,6 +58,7 @@ def conv3x3(in_planes, out_planes, stride=1):
 #
 #         return out
 
+# 残差块 没回个残差块都包含三个卷基层
 class Bottleneck(nn.Module):
     print('using Bottleneck')
     expansion = 4      # 输出通道数的倍乘
@@ -118,6 +119,7 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
 
+        # 平均池化
         self.avgpool = nn.AvgPool2d(7)
         # fc层
         self.fc = nn.Linear(512 * block.expansion, num_classes)
@@ -184,7 +186,7 @@ if __name__ == '__main__':
     model = resnet50(pretrained=True)
     model = model.double()
     # 做个测试
-    x = np.random.rand(2,3,256,256)
+    x = np.random.rand(2,3,256,256)# 也可以直接用torch.Tensor(2,3,256,256)
     x = torch.tensor(x)
     print('start training')
     # embed()

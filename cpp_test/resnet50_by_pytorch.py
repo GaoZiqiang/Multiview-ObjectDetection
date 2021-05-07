@@ -13,8 +13,12 @@ image = torch.Tensor(image).unsqueeze_(dim=0)
 image = image.permute((0, 3, 1, 2)).float()
 #加载使用pytorch自带resnet50模型
 model = models.resnet50(pretrained=True)
+#模型用于测试
 model = model.eval()
 
+# torch.jit.trace
+# Trace a function and return an executable or ScriptFunction
+# that will be optimized using just-in-time compilation.
 resnet = torch.jit.trace(model, torch.rand(1,3,224,224))
 # output=resnet(torch.ones(1,3,224,224))
 #使用测试模型转换
@@ -22,4 +26,4 @@ output = resnet(image)
 max_index = torch.max(output, 1)[1].item()
 print(max_index) # ImageNet1000类的类别序
 #保存转化后的模型
-resnet.save('resnet.pt')
+resnet.save('pytorch_resnet.pt')
