@@ -153,7 +153,7 @@ msmt17/
 Since the performance of Market1501 and DukeMTMCReID is too high, we suggest to using CUHK03 and MSMT17 for future research.
 
 ```bash
-python train_alignedreid.py  -d cuhk03 -a resnet50 --test_distance global_local --reranking (--labelsmooth)
+python train.py  -d cuhk03 -a resnet50 --test_distance global_local --reranking (--labelsmooth)
 ```
 
 **Note:** You can add your experimental settings for 'args'
@@ -165,15 +165,15 @@ python train_alignedreid.-d cuhk03 -a resnet50 --evaluate --resume YOUR_MODEL_PA
 ```
 #### Local(DMLI)
 ```bash
-python train_alignedreid.py -d cuhk03 -a resnet50 --evaluate --resume YOUR_MODEL_PATH --save-dir log/resnet50-cuhk03-alignedreid --test_distance local (--reranking)
+python train.py -d cuhk03 -a resnet50 --evaluate --resume YOUR_MODEL_PATH --save-dir log/resnet50-cuhk03-alignedreid --test_distance local (--reranking)
 ```
 #### Local(Without DMLI)
 ```bash
-python train_alignedreid.py -d cuhk03 -a resnet50 --evaluate --resume YOUR_MODEL_PATH --save-dir log/resnet50-cuhk03-alignedreid --test_distance local --unaligned (--reranking)
+python train.py -d cuhk03 -a resnet50 --evaluate --resume YOUR_MODEL_PATH --save-dir log/resnet50-cuhk03-alignedreid --test_distance local --unaligned (--reranking)
 ```
 #### Global
 ```bash
-python train_alignedreid.py -d cuhk03 -a resnet50 --evaluate --resume YOUR_MODEL_PATH --save-dir log/resnet50-cuhk03-alignedreid --test_distance global (--reranking)
+python train.py -d cuhk03 -a resnet50 --evaluate --resume YOUR_MODEL_PATH --save-dir log/resnet50-cuhk03-alignedreid --test_distance global (--reranking)
 ```
 
 **Note:** (--reranking) means whether you use 'Re-ranking with k-reciprocal Encoding (CVPR2017)' to boost the performance.
@@ -183,6 +183,6 @@ python train_alignedreid.py -d cuhk03 -a resnet50 --evaluate --resume YOUR_MODEL
 ```bash
 scp -r data/market1501 data/market1501-partial
 python gen_partial_dataset.py
-python train_alignedreid.py -d market1501-partial -a resnet50 --evaluate --resume YOUR_MODEL_PATH --save-dir log/resnet50-market1501-partial-alignedreid --test_distance local (--unaligned)
+python train.py -d market1501-partial -a resnet50 --evaluate --resume YOUR_MODEL_PATH --save-dir log/resnet50-market1501-partial-alignedreid --test_distance local (--unaligned)
 ```
 
