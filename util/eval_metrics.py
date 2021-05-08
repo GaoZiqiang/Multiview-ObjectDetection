@@ -87,7 +87,7 @@ def eval_market1501(distmat, q_pids, g_pids, q_camids, g_camids, max_rank):
     num_q, num_g = distmat.shape
     if num_g < max_rank:# max_rank=50
         max_rank = num_g
-        print("Note: number of gallery samples is quite small, got {}".format(num_g))
+        # print("Note: number of gallery samples is quite small, got {}".format(num_g))
     # 做排序，对相似度做排序
     indices = np.argsort(distmat, axis=1)
     # embed()
@@ -141,7 +141,9 @@ def eval_market1501(distmat, q_pids, g_pids, q_camids, g_camids, max_rank):
         tmp_cmc = orig_cmc.cumsum()
         tmp_cmc = [x / (i+1.) for i, x in enumerate(tmp_cmc)]
         tmp_cmc = np.asarray(tmp_cmc) * orig_cmc
-        AP = tmp_cmc.sum() / num_rel# 当num_rel为0时，AP为nan
+        AP = 0
+        if num_rel != 0:
+            AP = tmp_cmc.sum() / num_rel  # 当num_rel为0时，AP为nan
         # 检查num_rel是否为0值
         # embed()
         if AP > 0:
