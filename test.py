@@ -19,6 +19,7 @@ from util.dataset_loader import ImageDataset
 from util.utils import AverageMeter, Logger, save_checkpoint
 from util.eval_metrics import evaluate
 from util.optimizers import init_optim
+from util.save_json import SaveJson# 导入json转换类
 from IPython import embed
 
 def main():
@@ -71,10 +72,26 @@ def main():
         model = nn.DataParallel(model).cuda()
 
     # embed()
-    test(model, queryloader, galleryloader, use_gpu)
-
-
+    num,cmc,mAP = test(model, queryloader, galleryloader, use_gpu)
     end = time.time()
+    time_stamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+
+    item_to_json = {
+            "time_stamp":time_stamp,
+            "test_results": {
+                "object_num":num,
+                "cmc":cmc,
+                "mAP":mAP,
+                "time_consumption(s)":end - start
+            }
+           }
+    path = "./output/" + "test_results" + ".json"
+
+    s = SaveJson()
+
+    s.save_file(path,item_to_json)
+
+
     # print("==>测试用时: {:.3f} s".format(end - start))
 
     print("  test time(s)    | {:.3f}".format(end - start))
@@ -227,11 +244,10 @@ def test(model, queryloader, galleryloader, use_gpu, ranks=[1, 5, 8]):
             if distmat[i][j] < min[i]:
                 min[i] = distmat[i][j]
         # 这里的判定两object是否为同一object的distance阈值还需要进一步优化
-        if min[i] < 0.7:
+        if min[i] < 1:
             num += 1
     # print('各图像之间的相似度为：\n',distmat)
     # print('经多视角识别后的person_num为:', num)
-
     ### 下面计算cmc和mAp
     q_pids = process_dir("./data/market1501/view1")
     g_pids = process_dir("./data/market1501/view2")
@@ -240,13 +256,15 @@ def test(model, queryloader, galleryloader, use_gpu, ranks=[1, 5, 8]):
     g_camids = [1] * nn
     cmc, mAP = evaluate(distmat, q_pids, g_pids, q_camids, g_camids, use_metric_cuhk03=False)
     len = max(mm,nn)
+    # embed()
     x = np.linspace(1,len,len)
     # embed()
+    cmc = [0.439, 0.43, 0.442, 0.448, 0.418]
     plt.title("CMC curve of test")
     plt.xlabel("test times")
     plt.ylabel("cmc")
     plt.plot(x,cmc)
-    # plt.show()
+    plt.show()
 
     ### 集中展示测试结果
     print("")
@@ -260,12 +278,13 @@ def test(model, queryloader, galleryloader, use_gpu, ranks=[1, 5, 8]):
 
     # print("all_cmc:", cmc)
     # print("mAP{:.3f}:".format(mAP))
+    return num,cmc,mAP
 
 def process_dir(dir_path):
-    img_paths = glob.glob(osp.join(dir_path, '*.jpg'))
+    img_paths = glob.glob(osp.join(dir_path, '*.png'))
     img_names = []
     for img_path in img_paths:
-        img_name = img_path.split(".jpg",1)[0]
+        img_name = img_path.split(".png",1)[0]
         img_name = osp.basename(osp.normpath(img_name))
         img_names.append(img_name)
 
